@@ -5,9 +5,11 @@ import { CollapsibleSection } from "./CollapsibleSection";
 export async function AssetsSection() {
   let clips;
   let pagination;
+  let total;
   try {
     const response = await fetchAssets({ cursor: null });
     clips = response.data.clips;
+    total = response.data.total;
     pagination = response.pagination;
   } catch {
     return (
@@ -22,7 +24,7 @@ export async function AssetsSection() {
 
   return (
     <section className="mt-8">
-      <CollapsibleSection label={`${clips.length} ASSETS`}>
+      <CollapsibleSection label={`${total} ASSETS`}>
         {clips.length === 0 ? (
           <p className="text-sm text-gray-500">No assets found.</p>
         ) : (
