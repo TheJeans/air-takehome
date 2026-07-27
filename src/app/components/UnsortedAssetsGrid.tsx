@@ -22,9 +22,9 @@ interface Pagination {
 function LoadingMoreIndicator() {
   return (
     <div className="mt-3 flex items-center justify-center gap-2 py-2" aria-hidden="true">
-      <div className="size-2 animate-pulse rounded-full bg-gray-300" />
-      <div className="size-2 animate-pulse rounded-full bg-gray-300 [animation-delay:150ms]" />
-      <div className="size-2 animate-pulse rounded-full bg-gray-300 [animation-delay:300ms]" />
+      <div className="h-2 w-2 animate-pulse rounded-full bg-gray-300" />
+      <div className="h-2 w-2 animate-pulse rounded-full bg-gray-300 [animation-delay:150ms]" />
+      <div className="h-2 w-2 animate-pulse rounded-full bg-gray-300 [animation-delay:300ms]" />
     </div>
   );
 }

@@ -15,7 +15,7 @@ function EllipsisIcon() {
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill="currentColor"
-      className="size-4"
+      className="h-4 w-4"
       aria-hidden="true"
     >
       <circle cx="5" cy="12" r="2" />
@@ -107,7 +107,7 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}
-        className={`flex size-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity duration-150 hover:bg-black/80 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white group-hover:opacity-100 ${
+        className={`flex h-7 w-7 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity duration-150 hover:bg-black/80 focus:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white group-hover:opacity-100 ${
           open ? "opacity-100" : ""
         }`}
       >
@@ -117,7 +117,7 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
         <div
           role="menu"
           aria-label={`${label} actions`}
-          className="absolute right-0 top-8 min-w-36 rounded-2xl bg-white/95 py-1 text-sm shadow-2xl ring-1 ring-black/10"
+          className="absolute right-0 top-8 w-48 rounded-2xl bg-white/95 py-1 text-sm shadow-2xl ring-1 ring-black/10"
         >
           <button
             type="button"

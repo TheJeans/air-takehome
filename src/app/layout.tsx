@@ -22,7 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="flex size-full h-screen flex-col overflow-hidden bg-gray-200">
+        <div className="flex h-screen w-full flex-col overflow-hidden bg-gray-200">
           <div className="flex min-h-0 grow gap-2 overflow-hidden px-2 py-2">
             <div className="relative flex min-h-0 grow flex-col overflow-hidden bg-gray-1 rounded-lg bg-white">
               <TopBar />
