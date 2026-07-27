@@ -18,7 +18,9 @@ function StatusAnnouncement({ label }: { label: string }) {
 export function BoardsSkeleton() {
   return (
     <section>
-      <h2 className="mb-2 text-lg font-semibold">Boards</h2>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        Boards
+      </h2>
       <StatusAnnouncement label="boards" />
       <CardGrid aria-hidden="true">
         {Array.from({ length: 6 }).map((_, i) => (
@@ -32,7 +34,9 @@ export function BoardsSkeleton() {
 export function AssetsSkeleton() {
   return (
     <section className="mt-8">
-      <h2 className="mb-2 text-lg font-semibold">Assets</h2>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        Assets
+      </h2>
       <StatusAnnouncement label="assets" />
       <CardGrid aria-hidden="true">
         {/* Matches fetchAssets' limit (src/lib/clips.ts) so the skeleton's

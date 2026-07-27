@@ -1,7 +1,8 @@
-import { forwardRef, type ComponentPropsWithoutRef } from "react";
+import { forwardRef, useRef, type ComponentPropsWithoutRef } from "react";
 import type { Clip } from "../../lib/clips";
 import { FadeInImage } from "./FadeInImage";
 import { PlaceholderIcon } from "./PlaceholderIcon";
+import { CardMenu, type CardMenuHandle } from "./CardMenu";
 
 const THUMBNAIL_SIZES = "(min-width: 768px) 16vw, (min-width: 640px) 25vw, 50vw";
 
@@ -28,13 +29,18 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
       asset.type === "video" && asset.duration != null
         ? formatDuration(asset.duration)
         : null;
+    const menuRef = useRef<CardMenuHandle>(null);
 
     return (
       <li
         ref={ref}
         {...rest}
         role="listitem"
-        className={`relative aspect-[4/3] list-none overflow-hidden rounded-2xl bg-gray-200 ${className ?? ""}`}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          menuRef.current?.open();
+        }}
+        className={`group relative aspect-[4/3] list-none overflow-hidden rounded-2xl bg-gray-200 ${className ?? ""}`}
       >
         {asset.assets.image ? (
           // alt="" avoids a screen reader announcing it twice.
@@ -65,6 +71,7 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
         <div className="absolute inset-x-0 bottom-0 flex h-16 flex-col justify-end bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5">
           <p className="truncate text-md font-normal text-white px-2 pb-1">{title}</p>
         </div>
+        <CardMenu ref={menuRef} label={title} downloadUrl={asset.assets.image ?? undefined} />
       </li>
     );
   }

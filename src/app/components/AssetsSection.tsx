@@ -1,10 +1,14 @@
 import { fetchAssets } from "../../lib/clips";
 import { UnsortedAssetsGrid } from "./UnsortedAssetsGrid";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 export async function AssetsSection() {
   let clips;
+  let pagination;
   try {
-    clips = (await fetchAssets({ cursor: null })).data.clips;
+    const response = await fetchAssets({ cursor: null });
+    clips = response.data.clips;
+    pagination = response.pagination;
   } catch {
     return (
       <section className="mt-8">
@@ -18,12 +22,13 @@ export async function AssetsSection() {
 
   return (
     <section className="mt-8">
-      <h2 className="mb-2 text-lg font-semibold">Assets</h2>
-      {clips.length === 0 ? (
-        <p className="text-sm text-gray-500">No assets found.</p>
-      ) : (
-        <UnsortedAssetsGrid initialAssets={clips} />
-      )}
+      <CollapsibleSection label={`${clips.length} ASSETS`}>
+        {clips.length === 0 ? (
+          <p className="text-sm text-gray-500">No assets found.</p>
+        ) : (
+          <UnsortedAssetsGrid initialAssets={clips} initialPagination={pagination} />
+        )}
+      </CollapsibleSection>
     </section>
   );
 }
