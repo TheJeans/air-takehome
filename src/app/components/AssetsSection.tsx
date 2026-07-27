@@ -1,8 +1,5 @@
 import { fetchAssets } from "../../lib/clips";
-import { AssetCard } from "./AssetCard";
-import { CardGrid } from "./CardGrid";
-
-const ABOVE_FOLD_COUNT = 6;
+import { UnsortedAssetsGrid } from "./UnsortedAssetsGrid";
 
 export async function AssetsSection() {
   let clips;
@@ -25,15 +22,7 @@ export async function AssetsSection() {
       {clips.length === 0 ? (
         <p className="text-sm text-gray-500">No assets found.</p>
       ) : (
-        <CardGrid>
-          {clips.map((asset, index) => (
-            <AssetCard
-              key={asset.id}
-              asset={asset}
-              priority={index < ABOVE_FOLD_COUNT}
-            />
-          ))}
-        </CardGrid>
+        <UnsortedAssetsGrid initialAssets={clips} />
       )}
     </section>
   );

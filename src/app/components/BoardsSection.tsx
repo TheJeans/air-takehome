@@ -1,9 +1,5 @@
 import { fetchBoards } from "../../lib/boards";
-import { BoardCard } from "./BoardCard";
-import { CardGrid } from "./CardGrid";
-
-// These get `priority` instead of lazy-loading.
-const ABOVE_FOLD_COUNT = 6;
+import { SortableBoardsGrid } from "./SortableBoardsGrid";
 
 export async function BoardsSection() {
   let boards;
@@ -26,15 +22,7 @@ export async function BoardsSection() {
       {boards.length === 0 ? (
         <p className="text-sm text-gray-500">No boards found.</p>
       ) : (
-        <CardGrid>
-          {boards.map((board, index) => (
-            <BoardCard
-              key={board.id}
-              board={board}
-              priority={index < ABOVE_FOLD_COUNT}
-            />
-          ))}
-        </CardGrid>
+        <SortableBoardsGrid initialBoards={boards} />
       )}
     </section>
   );
