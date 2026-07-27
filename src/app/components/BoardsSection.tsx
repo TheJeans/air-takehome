@@ -1,5 +1,6 @@
 import { fetchBoards } from "../../lib/boards";
 import { SortableBoardsGrid } from "./SortableBoardsGrid";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 export async function BoardsSection() {
   let boards;
@@ -18,12 +19,13 @@ export async function BoardsSection() {
 
   return (
     <section>
-      <h2 className="mb-2 text-lg font-semibold">Boards</h2>
-      {boards.length === 0 ? (
-        <p className="text-sm text-gray-500">No boards found.</p>
-      ) : (
-        <SortableBoardsGrid initialBoards={boards} />
-      )}
+      <CollapsibleSection label={`${boards.length} BOARDS`}>
+        {boards.length === 0 ? (
+          <p className="text-sm text-gray-500">No boards found.</p>
+        ) : (
+          <SortableBoardsGrid initialBoards={boards} />
+        )}
+      </CollapsibleSection>
     </section>
   );
 }

@@ -26,6 +26,7 @@ import type { Board } from "../../lib/boards";
 import { AssetCard } from "./AssetCard";
 import { BoardCard } from "./BoardCard";
 import { computeDragEndState, idsKey } from "../../lib/galleryDragEnd";
+import { mergeAssets } from "../../lib/mergeAssets";
 
 // In-memory only, no write API exists. Lifted here so both the Unsorted
 // grid and boards grid can share it (see page.tsx).
@@ -46,6 +47,9 @@ interface AssetsContextValue {
   unsortedOrder: string[];
   assetsSeeded: boolean;
   seedAssets: (clips: Clip[]) => void;
+  /** Appends a fetched pagination page onto existing assets (infinite
+   *  scroll), rather than replacing the set the way seedAssets does. */
+  appendAssets: (clips: Clip[]) => void;
 }
 
 interface BoardsContextValue {
@@ -119,6 +123,17 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
         unsortedOrder.push(clip.id);
       }
       return { ...prev, assetsById, unsortedOrder, assetsSourceKey: key };
+    });
+  }, []);
+
+  // Appends a page fetched by infinite scroll. Delegates the actual
+  // merge/dedupe to mergeAssets (src/lib/mergeAssets.ts) so it's
+  // unit-testable and, critically, an O(new items) append rather than an
+  // O(n) rebuild of the whole set on every page as the list grows.
+  const appendAssets = useCallback((clips: Clip[]) => {
+    setState((prev) => {
+      const next = mergeAssets(prev, clips);
+      return next === prev ? prev : { ...prev, ...next };
     });
   }, []);
 
@@ -232,8 +247,9 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
       unsortedOrder: state.unsortedOrder,
       assetsSeeded: state.assetsSourceKey !== null,
       seedAssets,
+      appendAssets,
     }),
-    [state.assetsById, state.unsortedOrder, state.assetsSourceKey, seedAssets]
+    [state.assetsById, state.unsortedOrder, state.assetsSourceKey, seedAssets, appendAssets]
   );
 
   const boardsValue = useMemo(

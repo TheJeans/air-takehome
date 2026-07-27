@@ -1,7 +1,8 @@
-import Image from "next/image";
-import { forwardRef, type ComponentPropsWithoutRef } from "react";
+import { forwardRef, useRef, type ComponentPropsWithoutRef } from "react";
 import type { Clip } from "../../lib/clips";
+import { FadeInImage } from "./FadeInImage";
 import { PlaceholderIcon } from "./PlaceholderIcon";
+import { CardMenu, type CardMenuHandle } from "./CardMenu";
 
 const THUMBNAIL_SIZES = "(min-width: 768px) 16vw, (min-width: 640px) 25vw, 50vw";
 
@@ -17,34 +18,47 @@ function formatDuration(seconds: number): string | null {
 interface AssetCardProps extends ComponentPropsWithoutRef<"li"> {
   asset: Clip;
   priority?: boolean;
+  /** True for the initial server-rendered page only — see UnsortedAssetsGrid. */
+  eager?: boolean;
 }
 
 // `role` comes after `{...rest}`. dnd-kit's attributes include role="button",
 // which would otherwise override our role="listitem".
 export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
-  function AssetCard({ asset, priority = false, className, ...rest }, ref) {
+  function AssetCard({ asset, priority = false, eager = false, className, ...rest }, ref) {
     const title = asset.title ?? asset.importedName ?? "Untitled asset";
     const duration =
       asset.type === "video" && asset.duration != null
         ? formatDuration(asset.duration)
         : null;
+    const menuRef = useRef<CardMenuHandle>(null);
 
     return (
       <li
         ref={ref}
         {...rest}
         role="listitem"
-        className={`relative aspect-[4/3] list-none overflow-hidden rounded-2xl bg-gray-200 ${className ?? ""}`}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          menuRef.current?.open();
+        }}
+        className={`group relative aspect-[4/3] list-none overflow-hidden rounded-2xl bg-gray-200 ${className ?? ""}`}
       >
         {asset.assets.image ? (
           // alt="" avoids a screen reader announcing it twice.
-          <Image
+          <FadeInImage
             src={asset.assets.image}
             alt=""
             fill
             sizes={THUMBNAIL_SIZES}
             className="object-cover"
             priority={priority}
+            // The first page (small, already in the initial payload) is
+            // eager to avoid the empty/broken-placeholder flash on load.
+            // Pages pulled in later via infinite scroll are real lazy-load
+            // candidates — eagering those too would fire hundreds of
+            // concurrent image requests as the list grows past 500 assets.
+            loading={priority ? undefined : eager ? "eager" : "lazy"}
           />
         ) : (
           <PlaceholderIcon />
@@ -60,6 +74,7 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
         <div className="absolute inset-x-0 bottom-0 flex h-16 flex-col justify-end bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5">
           <p className="truncate text-md font-normal text-white px-2 pb-1">{title}</p>
         </div>
+        <CardMenu ref={menuRef} label={title} downloadUrl={asset.assets.image ?? undefined} />
       </li>
     );
   }
