@@ -3,8 +3,7 @@ import { computeDragEndState, idsKey, type DragEndState } from "./galleryDragEnd
 
 // Scope note: this suite covers computeDragEndState/idsKey as pure functions
 // only. Full pointer-drag-simulation end-to-end tests against @dnd-kit are
-// deliberately out of scope — they're flaky in practice and poor ROI for
-// the time available; this is a scope cut, not an oversight.
+// a deliberate scope cut (flaky, poor ROI here), not an oversight.
 
 function baseState(overrides: Partial<DragEndState> = {}): DragEndState {
   return {

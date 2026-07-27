@@ -6,16 +6,11 @@ import { CSS } from "@dnd-kit/utilities";
 import type { Board } from "../../lib/boards";
 import { BoardCard } from "./BoardCard";
 
-// Wraps BoardCard with drag behavior. useSortable alone covers both jobs a
-// board card needs: reordering against the other boards, and acting as a
-// drop target for an asset dragged out of Unsorted — dnd-kit's collision
-// detection finds this card's rect for both cases, so a separate
-// useDroppable isn't needed.
-//
-// `assetCount` comes in as a plain prop from SortableBoardsGrid rather than
-// this component reading `boardAssetIds` off context itself — that would
-// re-subscribe every board card to the whole map and re-render all of them
-// whenever any single board's count changed, defeating `memo()` below.
+// useSortable alone covers both jobs a board card needs: reordering against
+// other boards, and acting as a drop target for an asset. No separate
+// useDroppable needed.
+// `assetCount` comes in as a prop rather than reading `boardAssetIds` off
+// context directly, so unrelated board count changes don't re-render this card.
 function SortableBoardCardImpl({
   board,
   priority,

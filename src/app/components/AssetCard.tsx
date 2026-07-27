@@ -19,12 +19,8 @@ interface AssetCardProps extends ComponentPropsWithoutRef<"li"> {
   priority?: boolean;
 }
 
-// forwardRef + spread `rest` so drag wrappers (SortableAssetCard) can attach
-// dnd-kit's ref/listeners/style directly to this <li> instead of adding a
-// wrapping element, which would break the ul > li list semantics. `role`
-// is applied *after* `{...rest}` — dnd-kit's `attributes` include
-// `role: "button"`, which would otherwise silently win and make every card
-// announce as a button instead of a list item.
+// `role` comes after `{...rest}`. dnd-kit's attributes include role="button",
+// which would otherwise override our role="listitem".
 export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
   function AssetCard({ asset, priority = false, className, ...rest }, ref) {
     const title = asset.title ?? asset.importedName ?? "Untitled asset";

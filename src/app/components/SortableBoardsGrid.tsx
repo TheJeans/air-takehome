@@ -20,11 +20,9 @@ export function SortableBoardsGrid({ initialBoards }: { initialBoards: Board[] }
     seedBoards(initialBoards);
   }, [initialBoards, seedBoards]);
 
-  // Before the seed effect commits, render straight from the server-fetched
-  // prop so there's no empty-grid flash on first paint — same ids/order
-  // either way, so the swap-over is a no-op visually. Cards render
-  // read-only (plain BoardCard, not SortableBoardCard) until seeded, so a
-  // drag can't start before shared state exists to record its result.
+  // Before seeding, render straight from the server prop (same ids/order,
+  // no visual flash). Cards stay read-only until seeded, so a drag can't
+  // start before shared state exists to record its result.
   const ids = boardsSeeded ? boardOrder : initialBoards.map((board) => board.id);
   const lookup = boardsSeeded
     ? boardsById

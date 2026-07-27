@@ -14,11 +14,8 @@ interface BoardCardProps extends ComponentPropsWithoutRef<"li"> {
   isOver?: boolean;
 }
 
-// forwardRef so SortableBoardCard can attach dnd-kit's ref/listeners
-// directly to this <li> instead of adding a wrapping element (would break
-// ul > li). `role` is applied *after* `{...rest}` — dnd-kit's `attributes`
-// include `role: "button"`, which would otherwise silently win and make
-// every board card announce as a button instead of a list item.
+// `role` comes after `{...rest}`. dnd-kit's attributes include role="button",
+// which would otherwise override our role="listitem".
 export const BoardCard = forwardRef<HTMLLIElement, BoardCardProps>(
   function BoardCard(
     { board, priority = false, assetCount = 0, isOver = false, className, ...rest },

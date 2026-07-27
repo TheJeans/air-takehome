@@ -27,15 +27,10 @@ import { AssetCard } from "./AssetCard";
 import { BoardCard } from "./BoardCard";
 import { computeDragEndState, idsKey } from "../../lib/galleryDragEnd";
 
-// Shared client-state model for the Unsorted <-> board asset drag-and-drop,
-// and for reordering boards among themselves. There's no write API, so this
-// is purely in-memory and lifted to the lowest common ancestor of the
-// Unsorted grid and the boards grid (see page.tsx).
-//
-// `assetsSourceKey`/`boardsSourceKey` (rather than a one-shot boolean) track
-// *what* was last seeded, so a changed server payload (e.g. after
-// `router.refresh()`) can reseed instead of latching closed forever after
-// the first mount.
+// In-memory only, no write API exists. Lifted here so both the Unsorted
+// grid and boards grid can share it (see page.tsx).
+// `*SourceKey` tracks what was last seeded (vs. a one-shot bool) so a
+// changed server payload can reseed instead of latching shut after mount.
 interface GalleryState {
   assetsById: Record<string, Clip>;
   unsortedOrder: string[];
@@ -107,18 +102,12 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
     boardsSourceKey: null,
   });
 
-  // Visual clone shown in <DragOverlay> — kept separate from `state` since
-  // it's pure UI, not shared drag-and-drop data. It changes on every drag
-  // start/end regardless of which domain is dragging, so keeping it out of
-  // `state` keeps the memoized context values below (see assetsValue /
-  // boardsValue) from recomputing on every drag frame's start/end too.
+  // DragOverlay clone, kept out of `state` (pure UI, changes every drag
+  // start/end) so it doesn't force assetsValue/boardsValue to recompute.
   const [activeDrag, setActiveDrag] = useState<{ id: string; kind: DragKind } | null>(null);
 
-  // Reseeds whenever the incoming clip *set* actually changes (compared by
-  // id, not by reference) rather than latching closed after the first call —
-  // otherwise a revalidated fetch (`router.refresh()`) would never reach the
-  // grid once mounted. A same-set re-run (e.g. React strict-mode's double
-  // effect) is a no-op so in-progress reordering isn't wiped.
+  // Reseeds on a real id-set change, not just once, so a revalidated fetch
+  // isn't stuck with stale data. Same-set re-runs (e.g. strict-mode) no-op.
   const seedAssets = useCallback((clips: Clip[]) => {
     setState((prev) => {
       const key = idsKey(clips.map((clip) => clip.id));
@@ -133,7 +122,7 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  // Same reseed-on-change pattern as seedAssets, for the boards grid.
+  // Same reseed-on-change pattern as seedAssets.
   const seedBoards = useCallback((boards: Board[]) => {
     setState((prev) => {
       const key = idsKey(boards.map((board) => board.id));
@@ -148,10 +137,8 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  // Pointer activation waits on a brief press-and-hold (rather than firing on
-  // the first few pixels of movement) so a plain click/tap can still be used
-  // as a "select" gesture later without racing drag activation — see LOG.md
-  // on the react-drag-to-select pointerdown conflict this sets up for.
+  // Press-and-hold to activate (not on first movement) so a plain click can
+  // later work as a select gesture without racing drag activation.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -179,19 +166,16 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
         }
       : null;
 
-    // The branching (board reorder / asset move / asset reorder / no-op)
-    // lives in computeDragEndState — see src/lib/galleryDragEnd.ts — so it's
-    // unit-testable without rendering React or dnd-kit. `next === prev`
-    // means a no-op, so we bail without a state update in that case.
+    // Branching logic lives in computeDragEndState (src/lib/galleryDragEnd.ts)
+    // so it's unit-testable without React or dnd-kit. next === prev means no-op.
     setState((prev) => {
       const next = computeDragEndState(prev, activeActor, overActor);
       return next === prev ? prev : { ...prev, ...next };
     });
   }, []);
 
-  // Default dnd-kit announcements only describe sortable index changes —
-  // not enough given we also support dropping an asset onto a named board
-  // and reordering boards themselves, so this is customized per drag source.
+  // Default dnd-kit announcements only cover sortable index changes, not
+  // enough here (asset-onto-board, board reorder), so this is customized.
   const announcements: Announcements = useMemo(
     () => ({
       onDragStart({ active }) {
@@ -240,12 +224,8 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
     [state]
   );
 
-  // Split into two context values, each memoized on only the state slice its
-  // consumers read. `setState`'s spreads leave untouched slices at the same
-  // object reference, so e.g. an asset reorder (which only replaces
-  // `unsortedOrder`) leaves `boardsValue` referentially identical and board
-  // cards skip re-rendering — a single combined context value would change
-  // (and cascade re-renders through `memo()`) on every drag, anywhere.
+  // Two context values, each memoized on its own state slice, so an asset
+  // reorder doesn't change boardsValue's reference and re-render every board.
   const assetsValue = useMemo(
     (): AssetsContextValue => ({
       assetsById: state.assetsById,
@@ -276,14 +256,9 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
           accessibility={{ announcements, screenReaderInstructions }}
-          // snapCenterToCursor: without it, grabbing a card off-center (by
-          // an edge/corner) left the dragged clone offset from the cursor
-          // by however far off-center the grab point was.
-          // restrictToFirstScrollableAncestor: clamps the drag to the app
-          // shell's actual scroll region (the overflow-y-auto content pane
-          // in layout.tsx — the page itself doesn't scroll) — without it,
-          // dragging near the right/bottom edge fought with dnd-kit's
-          // auto-scroll and the page snapped back and forth.
+          // snapCenterToCursor keeps an off-center grab from drifting from the cursor.
+          // restrictToFirstScrollableAncestor clamps to the app shell's actual
+          // scroll region (layout.tsx), otherwise edge-drag fought the auto-scroll.
           modifiers={[snapCenterToCursor, restrictToFirstScrollableAncestor]}
         >
           {children}

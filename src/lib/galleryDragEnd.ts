@@ -15,7 +15,7 @@ export interface DragEndActor {
   id: string;
   /** Mirrors the `type` dnd-kit's `data.current` carries: "asset" | "board". */
   type?: string;
-  /** Only set on board droppables — see SortableBoardCard. */
+  /** Only set on board droppables, see SortableBoardCard. */
   boardId?: string;
 }
 
@@ -33,8 +33,7 @@ export function computeDragEndState(
 
   if (active.type === "board") {
     // Reorder: boards dragged among themselves. A board dragged over an
-    // asset (e.g. across the gap between the two sections) is a no-op,
-    // never a cross-list move — boards and assets don't mix here.
+    // asset is a no-op, never a cross-list move, boards and assets don't mix.
     if (over.type !== "board") return state;
     const oldIndex = state.boardOrder.indexOf(active.id);
     const newIndex = state.boardOrder.indexOf(over.id);
