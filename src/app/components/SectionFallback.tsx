@@ -2,7 +2,7 @@ import { CardGrid } from "./CardGrid";
 
 function SkeletonCard() {
   return (
-    <li className="aspect-square list-none animate-pulse rounded-2xl bg-gray-200" />
+    <li className="aspect-[4/3] list-none animate-pulse overflow-hidden rounded-2xl bg-gray-200" />
   );
 }
 
@@ -35,7 +35,9 @@ export function AssetsSkeleton() {
       <h2 className="mb-2 text-lg font-semibold">Assets</h2>
       <StatusAnnouncement label="assets" />
       <CardGrid aria-hidden="true">
-        {Array.from({ length: 18 }).map((_, i) => (
+        {/* Matches fetchAssets' limit (src/lib/clips.ts) so the skeleton's
+            row count doesn't shift when real cards stream in. */}
+        {Array.from({ length: 24 }).map((_, i) => (
           <SkeletonCard key={i} />
         ))}
       </CardGrid>

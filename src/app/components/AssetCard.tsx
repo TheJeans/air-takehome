@@ -1,6 +1,6 @@
-import Image from "next/image";
 import { forwardRef, type ComponentPropsWithoutRef } from "react";
 import type { Clip } from "../../lib/clips";
+import { FadeInImage } from "./FadeInImage";
 import { PlaceholderIcon } from "./PlaceholderIcon";
 
 const THUMBNAIL_SIZES = "(min-width: 768px) 16vw, (min-width: 640px) 25vw, 50vw";
@@ -38,13 +38,18 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
       >
         {asset.assets.image ? (
           // alt="" avoids a screen reader announcing it twice.
-          <Image
+          <FadeInImage
             src={asset.assets.image}
             alt=""
             fill
             sizes={THUMBNAIL_SIZES}
             className="object-cover"
             priority={priority}
+            // Small, fixed-size gallery (limit 24) - lazy-loading the
+            // below-the-fold cards buys nothing and is what causes the
+            // empty/broken-placeholder flash while each one waits for its
+            // IntersectionObserver to fire.
+            loading={priority ? undefined : "eager"}
           />
         ) : (
           <PlaceholderIcon />
