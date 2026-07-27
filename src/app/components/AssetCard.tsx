@@ -18,12 +18,14 @@ function formatDuration(seconds: number): string | null {
 interface AssetCardProps extends ComponentPropsWithoutRef<"li"> {
   asset: Clip;
   priority?: boolean;
+  /** True for the initial server-rendered page only — see UnsortedAssetsGrid. */
+  eager?: boolean;
 }
 
 // `role` comes after `{...rest}`. dnd-kit's attributes include role="button",
 // which would otherwise override our role="listitem".
 export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
-  function AssetCard({ asset, priority = false, className, ...rest }, ref) {
+  function AssetCard({ asset, priority = false, eager = false, className, ...rest }, ref) {
     const title = asset.title ?? asset.importedName ?? "Untitled asset";
     const duration =
       asset.type === "video" && asset.duration != null
@@ -51,11 +53,12 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
             sizes={THUMBNAIL_SIZES}
             className="object-cover"
             priority={priority}
-            // Small, fixed-size gallery (limit 24) - lazy-loading the
-            // below-the-fold cards buys nothing and is what causes the
-            // empty/broken-placeholder flash while each one waits for its
-            // IntersectionObserver to fire.
-            loading={priority ? undefined : "eager"}
+            // The first page (small, already in the initial payload) is
+            // eager to avoid the empty/broken-placeholder flash on load.
+            // Pages pulled in later via infinite scroll are real lazy-load
+            // candidates — eagering those too would fire hundreds of
+            // concurrent image requests as the list grows past 500 assets.
+            loading={priority ? undefined : eager ? "eager" : "lazy"}
           />
         ) : (
           <PlaceholderIcon />

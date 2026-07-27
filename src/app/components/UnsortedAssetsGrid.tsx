@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SortableContext, rectSortingStrategy } from "@dnd-kit/sortable";
 import { fetchAssets, type Clip } from "../../lib/clips";
 import { useAssetsDnd } from "./GalleryDndProvider";
@@ -44,6 +44,16 @@ export function UnsortedAssetsGrid({
   useEffect(() => {
     seedAssets(initialAssets);
   }, [initialAssets, seedAssets]);
+
+  // Ids from the server-rendered first page only — these get eager image
+  // loading to avoid the initial flash. Everything pulled in later via
+  // infinite scroll is a real lazy-load candidate (see AssetCard/`eager`).
+  // Keyed by id, not index, so a drag reorder can't relabel a paginated
+  // card as "eager" just because it moved earlier in the list.
+  const eagerIds = useMemo(
+    () => new Set(initialAssets.map((clip) => clip.id)),
+    [initialAssets]
+  );
 
   // Pagination cursor/hasMore live here (component-local), not in
   // GalleryDndProvider - they're fetch bookkeeping for this grid, not
@@ -118,9 +128,15 @@ export function UnsortedAssetsGrid({
                 key={id}
                 asset={lookup[id]}
                 priority={index < ABOVE_FOLD_COUNT}
+                eager={eagerIds.has(id)}
               />
             ) : (
-              <AssetCard key={id} asset={lookup[id]} priority={index < ABOVE_FOLD_COUNT} />
+              <AssetCard
+                key={id}
+                asset={lookup[id]}
+                priority={index < ABOVE_FOLD_COUNT}
+                eager={eagerIds.has(id)}
+              />
             )
           )}
         </CardGrid>

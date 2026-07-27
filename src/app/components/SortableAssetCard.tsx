@@ -12,9 +12,11 @@ import { AssetCard } from "./AssetCard";
 function SortableAssetCardImpl({
   asset,
   priority,
+  eager,
 }: {
   asset: Clip;
   priority: boolean;
+  eager: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: asset.id, data: { type: "asset" } });
@@ -24,6 +26,7 @@ function SortableAssetCardImpl({
       ref={setNodeRef}
       asset={asset}
       priority={priority}
+      eager={eager}
       className={isDragging ? "cursor-grabbing" : "cursor-grab"}
       style={{
         transform: CSS.Transform.toString(transform),
