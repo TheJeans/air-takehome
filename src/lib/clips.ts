@@ -1,3 +1,6 @@
+// Typed fetch helpers, not Next.js Route Handlers — this lives under `lib/`
+// (rather than `app/api/`) so it isn't mistaken for an HTTP endpoint.
+
 export interface Clip {
   id: string;
   accountId: string;
@@ -81,6 +84,9 @@ export const fetchAssets = ({
 }): Promise<ClipsListResponse> =>
   fetch(`https://api.air.inc/shorturl/${shortId}/clips/search`, {
     method: "post",
+    // This is live gallery data, not build-time-static content — don't let
+    // Next's default force-cache freeze it at build time.
+    cache: "no-store",
     headers: {
       accept: "application/json",
       "content-type": "application/json",
