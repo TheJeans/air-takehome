@@ -7,6 +7,7 @@ import { useBoardsDnd } from "./GalleryDndProvider";
 import { SortableBoardCard } from "./SortableBoardCard";
 import { BoardCard } from "./BoardCard";
 import { CardGrid } from "./CardGrid";
+import { useSelectedIds, useSelectionClick } from "./SelectionProvider";
 
 const ABOVE_FOLD_COUNT = 6;
 
@@ -28,6 +29,11 @@ export function SortableBoardsGrid({ initialBoards }: { initialBoards: Board[] }
     ? boardsById
     : Object.fromEntries(initialBoards.map((board) => [board.id, board]));
 
+  // Boards are selectable alongside assets — one selection, one marquee (see
+  // MarqueeSelectionArea in page.tsx). Shift-ranges extend within boards only.
+  const selectedIds = useSelectedIds();
+  const handleSelect = useSelectionClick(ids);
+
   return (
     <SortableContext items={ids} strategy={rectSortingStrategy}>
       <CardGrid>
@@ -38,6 +44,8 @@ export function SortableBoardsGrid({ initialBoards }: { initialBoards: Board[] }
               board={lookup[id]}
               priority={index < ABOVE_FOLD_COUNT}
               assetCount={boardAssetIds[id]?.length ?? 0}
+              selected={selectedIds.has(id)}
+              onSelect={handleSelect}
             />
           ) : (
             <BoardCard

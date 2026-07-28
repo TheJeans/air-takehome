@@ -7,6 +7,7 @@ import { useAssetsDnd } from "./GalleryDndProvider";
 import { SortableAssetCard } from "./SortableAssetCard";
 import { AssetCard } from "./AssetCard";
 import { CardGrid } from "./CardGrid";
+import { useSelectedIds, useSelectionClick } from "./SelectionProvider";
 
 const ABOVE_FOLD_COUNT = 6;
 // Small so a fetch is likely already in flight (or done) before the
@@ -40,6 +41,7 @@ export function UnsortedAssetsGrid({
   initialPagination: Pagination;
 }) {
   const { seedAssets, appendAssets, unsortedOrder, assetsById, assetsSeeded } = useAssetsDnd();
+  const selectedIds = useSelectedIds();
 
   useEffect(() => {
     seedAssets(initialAssets);
@@ -114,6 +116,10 @@ export function UnsortedAssetsGrid({
     ? assetsById
     : Object.fromEntries(initialAssets.map((clip) => [clip.id, clip]));
 
+  // Shared click gestures (click / cmd-click / shift-range). Marquee drag is
+  // handled by MarqueeSelectionArea at the page level.
+  const handleSelect = useSelectionClick(ids);
+
   if (ids.length === 0) {
     return <p className="text-sm text-gray-500">No unsorted assets remaining.</p>;
   }
@@ -129,6 +135,8 @@ export function UnsortedAssetsGrid({
                 asset={lookup[id]}
                 priority={index < ABOVE_FOLD_COUNT}
                 eager={eagerIds.has(id)}
+                selected={selectedIds.has(id)}
+                onSelect={handleSelect}
               />
             ) : (
               <AssetCard

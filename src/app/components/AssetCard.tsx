@@ -3,8 +3,7 @@ import type { Clip } from "../../lib/clips";
 import { FadeInImage } from "./FadeInImage";
 import { PlaceholderIcon } from "./PlaceholderIcon";
 import { CardMenu, type CardMenuHandle } from "./CardMenu";
-
-const THUMBNAIL_SIZES = "(min-width: 768px) 16vw, (min-width: 640px) 25vw, 50vw";
+import { SelectedAnnouncement, SelectionOverlay, THUMBNAIL_SIZES } from "./cardChrome";
 
 // Returns null (hide the badge) rather than rendering garbage like "NaN:NaN"
 // for a malformed/missing duration.
@@ -20,12 +19,17 @@ interface AssetCardProps extends ComponentPropsWithoutRef<"li"> {
   priority?: boolean;
   /** True for the initial server-rendered page only — see UnsortedAssetsGrid. */
   eager?: boolean;
+  /** Part of the current marquee/click selection (see SelectionProvider). */
+  selected?: boolean;
 }
 
 // `role` comes after `{...rest}`. dnd-kit's attributes include role="button",
 // which would otherwise override our role="listitem".
 export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
-  function AssetCard({ asset, priority = false, eager = false, className, ...rest }, ref) {
+  function AssetCard(
+    { asset, priority = false, eager = false, selected = false, className, ...rest },
+    ref
+  ) {
     const title = asset.title ?? asset.importedName ?? "Untitled asset";
     const duration =
       asset.type === "video" && asset.duration != null
@@ -38,12 +42,17 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
         ref={ref}
         {...rest}
         role="listitem"
+        // Attribute, not just a class: globals.css keys off it to fade the
+        // other cards riding along in a multi-asset drag, which needs an
+        // ancestor-state selector.
+        data-selected={selected || undefined}
         onContextMenu={(event) => {
           event.preventDefault();
           menuRef.current?.open();
         }}
         className={`group relative aspect-[4/3] list-none overflow-hidden rounded-2xl bg-gray-200 ${className ?? ""}`}
       >
+        {selected && <SelectedAnnouncement />}
         {asset.assets.image ? (
           // alt="" avoids a screen reader announcing it twice.
           <FadeInImage
@@ -74,6 +83,7 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
         <div className="absolute inset-x-0 bottom-0 flex h-16 flex-col justify-end bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5">
           <p className="truncate text-md font-normal text-white px-2 pb-1">{title}</p>
         </div>
+        {selected && <SelectionOverlay />}
         <CardMenu ref={menuRef} label={title} downloadUrl={asset.assets.image ?? undefined} />
       </li>
     );

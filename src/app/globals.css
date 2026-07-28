@@ -1,3 +1,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* While a multi-asset drag is in flight (data-multi-drag is set by
+   MarqueeSelectionArea), the selected cards still sitting in the grid fade to
+   show they're travelling with the pointer. Plain CSS because the rule depends
+   on an ancestor's state, which a Tailwind class on the card can't express. */
+[data-multi-drag] [data-selected] {
+  opacity: 0.4;
+  transition: opacity 120ms ease-out;
+}

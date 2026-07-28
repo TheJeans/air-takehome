@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -27,6 +29,7 @@ import { AssetCard } from "./AssetCard";
 import { BoardCard } from "./BoardCard";
 import { computeDragEndState, idsKey } from "../../lib/galleryDragEnd";
 import { mergeAssets } from "../../lib/mergeAssets";
+import { useSelectedIds, useSelectionActions } from "./SelectionProvider";
 
 // In-memory only, no write API exists. Lifted here so both the Unsorted
 // grid and boards grid can share it (see page.tsx).
@@ -108,7 +111,44 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
 
   // DragOverlay clone, kept out of `state` (pure UI, changes every drag
   // start/end) so it doesn't force assetsValue/boardsValue to recompute.
-  const [activeDrag, setActiveDrag] = useState<{ id: string; kind: DragKind } | null>(null);
+  // `count` is how many assets this drag is carrying (see handleDragStart).
+  const [activeDrag, setActiveDrag] = useState<{
+    id: string;
+    kind: DragKind;
+    count: number;
+  } | null>(null);
+
+  const selectedIds = useSelectedIds();
+  const selectionActions = useSelectionActions();
+  // Read inside drag handlers, which are created once — refs keep them from
+  // seeing a snapshot from an earlier render. Assigned in an effect, not during
+  // render: a render React throws away must not leave these holding values that
+  // were never committed.
+  const selectedRef = useRef(selectedIds);
+  const stateRef = useRef(state);
+  useEffect(() => {
+    selectedRef.current = selectedIds;
+    stateRef.current = state;
+  }, [selectedIds, state]);
+
+  // Selected ids that are still unsorted assets — boards can also be selected,
+  // and they don't ride along on an asset drag.
+  const selectedAssetIds = useCallback(
+    () => stateRef.current.unsortedOrder.filter((id) => selectedRef.current.has(id)),
+    []
+  );
+
+  // How many assets a drag of `id` is carrying, or null when it's a plain
+  // single-card drag. One helper so the overlay badge and the two screen-reader
+  // announcements can't disagree about what's being moved.
+  const multiAssetCount = useCallback(
+    (id: string): number | null => {
+      if (!selectedRef.current.has(id)) return null;
+      const count = selectedAssetIds().length;
+      return count > 1 ? count : null;
+    },
+    [selectedAssetIds]
+  );
 
   // Reseeds on a real id-set change, not just once, so a revalidated fetch
   // isn't stuck with stale data. Same-set re-runs (e.g. strict-mode) no-op.
@@ -159,35 +199,64 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const kind: DragKind = event.active.data.current?.type === "board" ? "board" : "asset";
-    setActiveDrag({ id: String(event.active.id), kind });
-  }, []);
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const kind: DragKind = event.active.data.current?.type === "board" ? "board" : "asset";
+      const id = String(event.active.id);
+
+      // Grabbing a card outside the current selection makes it the selection —
+      // Finder/Air behavior, and it keeps the drag from silently carrying cards
+      // the user isn't pointing at.
+      let count = 1;
+      if (kind === "asset") {
+        if (selectedRef.current.has(id)) {
+          count = multiAssetCount(id) ?? 1;
+        } else {
+          selectionActions.replace([id]);
+          selectionActions.setAnchor(id);
+        }
+      }
+      setActiveDrag({ id, kind, count });
+    },
+    [selectionActions, multiAssetCount]
+  );
 
   const handleDragCancel = useCallback(() => {
     setActiveDrag(null);
   }, []);
 
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    setActiveDrag(null);
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      setActiveDrag(null);
 
-    const { active, over } = event;
-    const activeActor = { id: String(active.id), type: active.data.current?.type as string | undefined };
-    const overActor = over
-      ? {
-          id: String(over.id),
-          type: over.data.current?.type as string | undefined,
-          boardId: over.data.current?.boardId as string | undefined,
-        }
-      : null;
+      const { active, over } = event;
+      const activeActor = { id: String(active.id), type: active.data.current?.type as string | undefined };
+      const overActor = over
+        ? {
+            id: String(over.id),
+            type: over.data.current?.type as string | undefined,
+            boardId: over.data.current?.boardId as string | undefined,
+          }
+        : null;
 
-    // Branching logic lives in computeDragEndState (src/lib/galleryDragEnd.ts)
-    // so it's unit-testable without React or dnd-kit. next === prev means no-op.
-    setState((prev) => {
-      const next = computeDragEndState(prev, activeActor, overActor);
-      return next === prev ? prev : { ...prev, ...next };
-    });
-  }, []);
+      // The whole selection rides along when the grabbed card is part of it.
+      const dragging = activeActor.type === "board" ? undefined : selectedAssetIds();
+
+      // Branching logic lives in computeDragEndState (src/lib/galleryDragEnd.ts)
+      // so it's unit-testable without React or dnd-kit. next === prev means no-op.
+      setState((prev) => {
+        const next = computeDragEndState(prev, activeActor, overActor, dragging);
+        return next === prev ? prev : { ...prev, ...next };
+      });
+
+      // Assets filed onto a board have left the Unsorted grid, so the
+      // selection that pointed at them is stale. A reorder keeps its selection.
+      if (overActor?.type === "board" && activeActor.type === "asset") {
+        selectionActions.clear();
+      }
+    },
+    [selectionActions, selectedAssetIds]
+  );
 
   // Default dnd-kit announcements only cover sortable index changes, not
   // enough here (asset-onto-board, board reorder), so this is customized.
@@ -197,6 +266,8 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
         if (active.data.current?.type === "board") {
           return `Picked up ${boardTitleFor(state, String(active.id))}.`;
         }
+        const count = multiAssetCount(String(active.id));
+        if (count) return `Picked up ${count} assets.`;
         return `Picked up ${titleFor(state, String(active.id))}.`;
       },
       onDragOver({ active, over }) {
@@ -224,7 +295,8 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
         if (!over) return `${activeTitle} was dropped.`;
         const boardId = over.data.current?.boardId as string | undefined;
         if (boardId) {
-          return `${activeTitle} was moved to ${boardTitleFor(state, boardId)}.`;
+          const count = multiAssetCount(String(active.id));
+          return `${count ? `${count} assets` : activeTitle} moved to ${boardTitleFor(state, boardId)}.`;
         }
         return `${activeTitle} was reordered.`;
       },
@@ -236,7 +308,7 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
         return `Moving ${label} was cancelled.`;
       },
     }),
-    [state]
+    [state, multiAssetCount]
   );
 
   // Two context values, each memoized on its own state slice, so an asset
@@ -286,8 +358,28 @@ export function GalleryDndProvider({ children }: { children: React.ReactNode }) 
             {activeDrag &&
               (activeDrag.kind === "asset" ? (
                 state.assetsById[activeDrag.id] && (
-                  <div aria-hidden="true" className="w-40 cursor-grabbing">
-                    <AssetCard asset={state.assetsById[activeDrag.id]} className="shadow-2xl" />
+                  <div aria-hidden="true" className="relative w-40 cursor-grabbing">
+                    {/* Offset stubs behind the card read as "a stack" while
+                        multiple assets are in flight. */}
+                    {activeDrag.count > 1 && (
+                      <>
+                        <div className="absolute inset-0 translate-x-2 translate-y-2 rounded-2xl bg-gray-300 shadow-lg" />
+                        <div className="absolute inset-0 translate-x-1 translate-y-1 rounded-2xl bg-gray-400 shadow-lg" />
+                      </>
+                    )}
+                    <AssetCard
+                      asset={state.assetsById[activeDrag.id]}
+                      className="relative shadow-2xl"
+                      // The bitmap is already cached, but FadeInImage starts at
+                      // opacity-0 — without this the clone fades up over 300ms
+                      // every time a drag starts.
+                      eager
+                    />
+                    {activeDrag.count > 1 && (
+                      <div className="absolute -right-2 -top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-600 px-1.5 text-sm font-semibold text-white shadow-lg">
+                        {activeDrag.count}
+                      </div>
+                    )}
                   </div>
                 )
               ) : (

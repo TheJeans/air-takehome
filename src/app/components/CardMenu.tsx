@@ -61,7 +61,12 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      // The open menu owns this Escape. Without stopping it here, the
+      // selection's own window-level Escape handler (MarqueeSelectionArea)
+      // also fires and wipes the selection just for dismissing a menu.
+      event.stopPropagation();
     }
 
     document.addEventListener("pointerdown", handlePointerDown);

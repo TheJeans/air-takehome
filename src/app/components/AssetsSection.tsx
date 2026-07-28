@@ -24,6 +24,8 @@ export async function AssetsSection() {
 
   return (
     <section className="mt-8">
+      {/* Selection state and the marquee live at the page level (page.tsx) so
+          one drag can span boards and assets alike. */}
       <CollapsibleSection label={`${total} ASSETS`}>
         {clips.length === 0 ? (
           <p className="text-sm text-gray-500">No assets found.</p>

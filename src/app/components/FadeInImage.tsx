@@ -14,7 +14,12 @@ export function FadeInImage({ className, onLoad, ...rest }: ImageProps) {
   return (
     <Image
       {...rest}
-      className={`transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"} ${className ?? ""}`}
+      // Images are natively draggable, and once the browser starts its own
+      // image drag it stops delivering mousemove — which silently killed both
+      // the marquee (MarqueeSelectionArea) and dnd-kit's card drag whenever a
+      // gesture started on a thumbnail.
+      draggable={false}
+      className={`select-none transition-opacity duration-300 ${loaded ? "opacity-100" : "opacity-0"} ${className ?? ""}`}
       onLoad={(event) => {
         setLoaded(true);
         onLoad?.(event);
