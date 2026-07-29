@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 // Small "..." icon, following the inline-SVG pattern used by PlaceholderIcon.
 function EllipsisIcon() {
@@ -46,17 +47,32 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
   ref
 ) {
   const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     open: () => setOpen(true),
   }));
 
+  // Positioned via the trigger's rect rather than CSS `absolute`, since the
+  // menu is portaled out to <body> to escape the card's overflow-hidden
+  // (which clips it — see the rounded thumbnail corners on AssetCard/BoardCard).
+  useEffect(() => {
+    if (!open) return;
+    const button = containerRef.current?.querySelector("button");
+    const rect = button?.getBoundingClientRect();
+    if (rect) {
+      setMenuPos({ top: rect.bottom + window.scrollY + 4, left: rect.right + window.scrollX - 192 });
+    }
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
 
     function handlePointerDown(event: PointerEvent) {
-      if (!containerRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!containerRef.current?.contains(target) && !menuRef.current?.contains(target)) {
         setOpen(false);
       }
     }
@@ -69,11 +85,17 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
       event.stopPropagation();
     }
 
+    function handleScroll() {
+      setOpen(false);
+    }
+
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleScroll, true);
     return () => {
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleScroll, true);
     };
   }, [open]);
 
@@ -86,16 +108,29 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
     setOpen(false);
   }
 
-  function handleDownload() {
-    if (downloadUrl) {
+  async function handleDownload() {
+    setOpen(false);
+    if (!downloadUrl) {
+      console.log(`Download stub for "${label}"`);
+      return;
+    }
+    // `download` on an <a> is ignored for cross-origin URLs (the CDN serving
+    // these thumbnails isn't same-origin), so the browser just navigates
+    // there instead of saving the file. Fetching the bytes ourselves and
+    // downloading a blob: URL works regardless of origin.
+    try {
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = downloadUrl;
+      link.href = blobUrl;
       link.download = label;
       link.click();
-    } else {
-      console.log(`Download stub for "${label}"`);
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      // CORS or network failure - fall back to just opening it, same as before.
+      window.open(downloadUrl, "_blank");
     }
-    setOpen(false);
   }
 
   return (
@@ -118,30 +153,34 @@ export const CardMenu = forwardRef<CardMenuHandle, CardMenuProps>(function CardM
       >
         <EllipsisIcon />
       </button>
-      {open && (
-        <div
-          role="menu"
-          aria-label={`${label} actions`}
-          className="absolute right-0 top-8 w-48 rounded-2xl bg-white/95 py-1 text-sm shadow-2xl ring-1 ring-black/10"
-        >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleShare}
-            className="block w-full px-3 py-1.5 text-left text-gray-800 hover:bg-gray-100"
+      {open &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="menu"
+            aria-label={`${label} actions`}
+            style={{ top: menuPos.top, left: menuPos.left }}
+            className="fixed z-50 w-48 overflow-hidden rounded-2xl bg-white/95 py-1 text-sm shadow-2xl ring-1 ring-black/10"
           >
-            Share a Link
-          </button>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleDownload}
-            className="block w-full px-3 py-1.5 text-left text-gray-800 hover:bg-gray-100"
-          >
-            Download
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleShare}
+              className="block w-full px-3 py-1.5 text-left text-gray-800 hover:bg-gray-100"
+            >
+              Share a Link
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleDownload}
+              className="block w-full px-3 py-1.5 text-left text-gray-800 hover:bg-gray-100"
+            >
+              Download
+            </button>
+          </div>,
+          document.body
+        )}
     </div>
   );
 });

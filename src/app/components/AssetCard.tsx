@@ -80,7 +80,7 @@ export const AssetCard = forwardRef<HTMLLIElement, AssetCardProps>(
             {duration}
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 flex h-16 flex-col justify-end bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5">
+        <div className="absolute inset-x-0 bottom-0 flex h-16 flex-col justify-end bg-gradient-to-t from-black/60 to-transparent px-2 pb-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
           <p className="truncate text-md font-normal text-white px-2 pb-1">{title}</p>
         </div>
         {selected && <SelectionOverlay />}
